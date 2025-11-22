@@ -18,15 +18,15 @@ static_sites:
         type: SECRET
         value: "__VITE_AFTERSHIP_API_KEY__"
       - key: VITE_METABASE_SITE_URL
-        scope: BUILD_AND_RUN_TIME
+        scope: BUILD_TIME
         type: SECRET
         value: "__VITE_METABASE_SITE_URL__"
       - key: VITE_METABASE_SECRET_KEY
-        scope: BUILD_AND_RUN_TIME
+        scope: BUILD_TIME
         type: SECRET
         value: "__VITE_METABASE_SECRET_KEY__"
       - key: VITE_METABASE_QUESTION_ID
-        scope: BUILD_AND_RUN_TIME
+        scope: BUILD_TIME
         type: SECRET
         value: "__VITE_METABASE_QUESTION_ID__"
 
