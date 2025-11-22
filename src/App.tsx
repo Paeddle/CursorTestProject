@@ -519,10 +519,11 @@ function App() {
                   <p>If the query is failing, check:</p>
                   <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
                     <li>Is the question ID correct? (Current: {import.meta.env.VITE_METABASE_QUESTION_ID || 'NOT SET'})</li>
-                    <li>Is the question enabled for embedding in Metabase?</li>
+                    <li>Is the question enabled for static embedding in Metabase?</li>
                     <li>Does the question have a valid database connection?</li>
                     <li>Check Metabase logs: Admin → Tools → Logs</li>
                     <li>Try opening the question directly in Metabase to verify it works</li>
+                    <li>If using HTTPS site, ensure Metabase URL supports HTTPS (code will auto-convert HTTP to HTTPS)</li>
                   </ul>
                   <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>
                     Check browser console for the generated embed URL and JWT payload details.
