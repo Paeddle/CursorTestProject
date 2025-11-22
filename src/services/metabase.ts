@@ -21,21 +21,32 @@ export async function generateMetabaseEmbedUrl(config: MetabaseConfig): Promise<
     params = {}
   } = config
 
-  // Create the payload
-  const payload = {
-    resource: { question: questionId },
-    params: params,
-    exp: Math.round(Date.now() / 1000) + (expirationMinutes * 60) // expiration in seconds
+  // Create the payload according to Metabase static embedding spec
+  // Note: 'exp' should be set via setExpirationTime, not in payload
+  const payload: any = {
+    resource: { question: questionId }
+  }
+  
+  // Only add params if they exist and are not empty
+  if (params && Object.keys(params).length > 0) {
+    payload.params = params
   }
 
   // Convert secret key to Uint8Array for jose
   const secretKeyBytes = new TextEncoder().encode(secretKey)
 
+  // Calculate expiration time
+  const expTime = Math.round(Date.now() / 1000) + (expirationMinutes * 60)
+
   // Sign the JWT token
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime(Math.round(Date.now() / 1000) + (expirationMinutes * 60))
+    .setExpirationTime(expTime)
+    .setIssuedAt(Math.round(Date.now() / 1000))
     .sign(secretKeyBytes)
+  
+  console.log('Metabase JWT payload:', JSON.stringify(payload, null, 2))
+  console.log('Metabase expiration time:', new Date(expTime * 1000).toISOString())
 
   // Construct the iframe URL
   // Ensure HTTPS if the current page is HTTPS (to avoid mixed content issues)
