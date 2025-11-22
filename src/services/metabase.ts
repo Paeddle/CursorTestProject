@@ -23,13 +23,10 @@ export async function generateMetabaseEmbedUrl(config: MetabaseConfig): Promise<
 
   // Create the payload according to Metabase static embedding spec
   // Note: 'exp' should be set via setExpirationTime, not in payload
+  // Metabase requires 'params' to always be present, even if empty
   const payload: any = {
-    resource: { question: questionId }
-  }
-  
-  // Only add params if they exist and are not empty
-  if (params && Object.keys(params).length > 0) {
-    payload.params = params
+    resource: { question: questionId },
+    params: params || {} // Always include params, even if empty
   }
 
   // Convert secret key to Uint8Array for jose
