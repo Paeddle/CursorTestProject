@@ -100,6 +100,9 @@ Set-Location $repoRoot
 $config = Load-Config $ConfigPath
 $doAccessToken = Get-Setting $config 'DO_ACCESS_TOKEN' $null -Required
 $aftershipKey = Get-Setting $config 'VITE_AFTERSHIP_API_KEY' $null -Required
+$metabaseSiteUrl = Get-Setting $config 'VITE_METABASE_SITE_URL' $null
+$metabaseSecretKey = Get-Setting $config 'VITE_METABASE_SECRET_KEY' $null
+$metabaseQuestionId = Get-Setting $config 'VITE_METABASE_QUESTION_ID' $null
 $appName = Get-Setting $config 'DO_APP_NAME' 'cursor-test-project'
 $region = Get-Setting $config 'DO_REGION' 'nyc'
 $githubRepo = Get-Setting $config 'DO_GITHUB_REPO' $null -Required
@@ -122,6 +125,9 @@ $replacements = @{
   '__APP_NAME__' = $appName
   '__REGION__' = $region
   '__VITE_AFTERSHIP_API_KEY__' = $aftershipKey
+  '__VITE_METABASE_SITE_URL__' = if ($metabaseSiteUrl) { $metabaseSiteUrl } else { '' }
+  '__VITE_METABASE_SECRET_KEY__' = if ($metabaseSecretKey) { $metabaseSecretKey } else { '' }
+  '__VITE_METABASE_QUESTION_ID__' = if ($metabaseQuestionId) { $metabaseQuestionId } else { '' }
   '__GITHUB_REPO__' = $githubRepo
   '__GITHUB_BRANCH__' = $githubBranch
 }
