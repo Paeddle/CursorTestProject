@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "node -e \"const fs = require('fs'); console.log('Current dir:', process.cwd()); console.log('Files in root:', fs.readdirSync('.')); console.log('src exists:', fs.existsSync('src')); if (fs.existsSync('src')) console.log('Files in src:', fs.readdirSync('src')); console.log('index.html exists:', fs.existsSync('index.html'));\" && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
