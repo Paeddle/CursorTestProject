@@ -509,21 +509,23 @@ function App() {
               </div>
             ) : (
               <div className="metabase-config-message">
-                <p>⚠️ Metabase configuration not found</p>
-                <p>Debug info:</p>
+                <p>⚠️ Metabase configuration issue detected</p>
                 <div className="metabase-instructions">
+                  <p><strong>Mixed Content Error:</strong></p>
+                  <p>Your site is served over HTTPS, but Metabase is using HTTP. Browsers block HTTP content on HTTPS pages for security.</p>
+                  <p><strong>Solution:</strong></p>
+                  <ol>
+                    <li>Configure your Metabase instance (artichoke-penguin.pikapod.net) to use HTTPS</li>
+                    <li>Update <code>VITE_METABASE_SITE_URL</code> in DigitalOcean to use <code>https://</code> instead of <code>http://</code></li>
+                    <li>Or check if your Pikapod instance supports HTTPS automatically</li>
+                  </ol>
+                  <p><strong>Current configuration:</strong></p>
                   <ul>
                     <li>VITE_METABASE_SITE_URL: {import.meta.env.VITE_METABASE_SITE_URL || 'NOT SET'}</li>
                     <li>VITE_METABASE_SECRET_KEY: {import.meta.env.VITE_METABASE_SECRET_KEY ? 'SET (hidden)' : 'NOT SET'}</li>
                     <li>VITE_METABASE_QUESTION_ID: {import.meta.env.VITE_METABASE_QUESTION_ID || 'NOT SET'}</li>
                   </ul>
-                  <p>Please check the browser console for detailed error messages.</p>
-                  <p>For DigitalOcean, add these as App-Level Environment Variables with scope <code>RUN_AND_BUILD_TIME</code>:</p>
-                  <ul>
-                    <li><code>VITE_METABASE_SITE_URL</code> = <code>http://artichoke-penguin.pikapod.net</code></li>
-                    <li><code>VITE_METABASE_SECRET_KEY</code> = <code>53fe21e7488ef56145dbfb9ef9ae8d0a30a804c5c388271ae467a3cecf74f995</code></li>
-                    <li><code>VITE_METABASE_QUESTION_ID</code> = <code>41</code></li>
-                  </ul>
+                  <p><em>Check the browser console for the generated URL and any errors.</em></p>
                 </div>
               </div>
             )}

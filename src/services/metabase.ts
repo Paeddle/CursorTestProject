@@ -38,7 +38,14 @@ export async function generateMetabaseEmbedUrl(config: MetabaseConfig): Promise<
     .sign(secretKeyBytes)
 
   // Construct the iframe URL
-  const iframeUrl = `${siteUrl}/embed/question/${token}#bordered=true&titled=true`
+  // Ensure HTTPS if the current page is HTTPS (to avoid mixed content issues)
+  let finalSiteUrl = siteUrl
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && siteUrl.startsWith('http://')) {
+    // Try HTTPS version if available
+    finalSiteUrl = siteUrl.replace('http://', 'https://')
+  }
+  
+  const iframeUrl = `${finalSiteUrl}/embed/question/${token}#bordered=true&titled=true`
 
   return iframeUrl
 }
