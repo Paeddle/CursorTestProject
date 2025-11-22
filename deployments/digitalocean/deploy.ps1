@@ -138,6 +138,8 @@ if (Test-Path $appIdFile) {
   }
   Write-Info "Updating existing DigitalOcean App ($appId)"
   & $doctlPath apps update $appId --spec $specGenerated | Out-Null
+  Write-Info "Creating new deployment to use latest commit..."
+  & $doctlPath apps create-deployment $appId --force-rebuild | Out-Null
 } else {
   Write-Info "Creating new DigitalOcean App ($appName in $region)"
   $appId = (& $doctlPath apps create --spec $specGenerated --format ID --no-header).Trim()
