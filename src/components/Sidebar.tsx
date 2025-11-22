@@ -8,8 +8,8 @@ interface SidebarProps {
 function Sidebar({ activePage, onNavigate }: SidebarProps) {
   const menuItems = [
     { id: 'tracking', label: 'Order Tracking', icon: '📦' },
+    { id: 'order-history', label: 'Order History', icon: '📋' },
     { id: 'analytics', label: 'Analytics', icon: '📊' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' },
   ]
 
   return (

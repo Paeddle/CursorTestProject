@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import { csvService, TrackingInfo, POItem } from './services/csvService'
 import Sidebar from './components/Sidebar'
+import { getMetabaseEmbedUrl } from './services/metabase'
 
 type SortColumn = 'tracking_number' | 'order_id' | 'po_number' | 'from_company' | 'recipient_name' | 'carrier' | 'status' | 'ship_date' | 'estimated_delivery'
 type SortDirection = 'asc' | 'desc' | null
@@ -17,11 +18,50 @@ function App() {
   const [poItemsMap, setPoItemsMap] = useState<Map<string, POItem[]>>(new Map())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'orders' | 'items'>('orders')
+  const [itemSearchColumn, setItemSearchColumn] = useState<'all' | 'item_name' | 'part_number' | 'description' | 'color' | 'quantity' | 'po_number'>('all')
+  const [metabaseUrl, setMetabaseUrl] = useState<string | null>(null)
+  const [metabaseLoading, setMetabaseLoading] = useState(false)
 
   useEffect(() => {
     loadTrackings()
     loadPOItems()
   }, [])
+
+  // Load Metabase embed URL when analytics page is active
+  useEffect(() => {
+    if (activePage === 'analytics') {
+      loadMetabaseUrl()
+      
+      // Refresh the URL every 9 minutes (before 10 minute expiration)
+      const refreshInterval = setInterval(() => {
+        loadMetabaseUrl()
+      }, 9 * 60 * 1000) // 9 minutes
+      
+      return () => clearInterval(refreshInterval)
+    }
+  }, [activePage])
+
+  const loadMetabaseUrl = async () => {
+    setMetabaseLoading(true)
+    try {
+      const url = await getMetabaseEmbedUrl()
+      setMetabaseUrl(url)
+    } catch (err: any) {
+      console.error('Error loading Metabase URL:', err)
+      setMetabaseUrl(null)
+    } finally {
+      setMetabaseLoading(false)
+    }
+  }
+
+  // Clear status filter when switching to order history (since all are delivered)
+  // Also clear when switching to items view
+  useEffect(() => {
+    if (activePage === 'order-history' || viewMode === 'items') {
+      setStatusFilter([])
+    }
+  }, [activePage, viewMode])
 
   const loadPOItems = async () => {
     try {
@@ -292,7 +332,17 @@ function App() {
 
   const additionalColumns = getAdditionalColumns()
 
-  const filteredTrackings = filterTrackings(trackings, searchTerm, statusFilter)
+  // Filter trackings based on active page
+  let trackingsToShow = trackings
+  if (activePage === 'tracking') {
+    // Exclude delivered orders from tracking page
+    trackingsToShow = trackings.filter(t => t.tag?.toLowerCase() !== 'delivered')
+  } else if (activePage === 'order-history') {
+    // Show only delivered orders in order history
+    trackingsToShow = trackings.filter(t => t.tag?.toLowerCase() === 'delivered')
+  }
+
+  const filteredTrackings = filterTrackings(trackingsToShow, searchTerm, statusFilter)
   const sortedTrackings = sortTrackings(filteredTrackings, sortColumn, sortDirection)
 
   const formatColumnName = (key: string): string => {
@@ -301,13 +351,130 @@ function App() {
       .replace(/\b\w/g, l => l.toUpperCase())
   }
 
+  // Get all items from PO items map, optionally filtered by order status
+  const getAllItems = (onlyDelivered?: boolean): POItem[] => {
+    const allItems: POItem[] = []
+    
+    if (onlyDelivered === true) {
+      // Only get items from delivered orders
+      const deliveredPONumbers = new Set(
+        trackings
+          .filter(t => t.tag?.toLowerCase() === 'delivered' && t.po_number)
+          .map(t => t.po_number!.toLowerCase())
+      )
+      
+      poItemsMap.forEach((items, poNumber) => {
+        if (deliveredPONumbers.has(poNumber.toLowerCase())) {
+          allItems.push(...items)
+        }
+      })
+    } else if (onlyDelivered === false) {
+      // Get items from non-delivered orders
+      const nonDeliveredPONumbers = new Set(
+        trackings
+          .filter(t => t.tag?.toLowerCase() !== 'delivered' && t.po_number)
+          .map(t => t.po_number!.toLowerCase())
+      )
+      
+      poItemsMap.forEach((items, poNumber) => {
+        if (nonDeliveredPONumbers.has(poNumber.toLowerCase())) {
+          allItems.push(...items)
+        }
+      })
+    } else {
+      // Get all items (no filter)
+      poItemsMap.forEach((items) => {
+        allItems.push(...items)
+      })
+    }
+    
+    return allItems
+  }
+
+  // Filter items based on search term and selected column
+  const filterItems = (items: POItem[], search: string, column: typeof itemSearchColumn): POItem[] => {
+    if (!search.trim()) return items
+    
+    const searchLower = search.toLowerCase().trim()
+    return items.filter(item => {
+      if (column === 'all') {
+        // Search all item fields
+        const searchableFields = [
+          item.item_name,
+          item.part_number,
+          item.description,
+          item.color,
+          String(item.quantity),
+          item.po_number
+        ].filter(Boolean).map(f => String(f).toLowerCase())
+        
+        return searchableFields.some(field => field.includes(searchLower))
+      } else {
+        // Search only the selected column
+        let fieldValue: string = ''
+        switch (column) {
+          case 'item_name':
+            fieldValue = item.item_name || ''
+            break
+          case 'part_number':
+            fieldValue = item.part_number || ''
+            break
+          case 'description':
+            fieldValue = item.description || ''
+            break
+          case 'color':
+            fieldValue = item.color || ''
+            break
+          case 'quantity':
+            fieldValue = String(item.quantity || '')
+            break
+          case 'po_number':
+            fieldValue = item.po_number || ''
+            break
+        }
+        return fieldValue.toLowerCase().includes(searchLower)
+      }
+    })
+  }
+
+  // Find order by PO number
+  const findOrderByPONumber = (poNumber: string): TrackingInfo | null => {
+    return trackings.find(t => 
+      t.po_number?.toLowerCase() === poNumber.toLowerCase()
+    ) || null
+  }
+
+  // Handle item click - find and show the order
+  const handleItemClick = (item: POItem) => {
+    const order = findOrderByPONumber(item.po_number)
+    if (order) {
+      setSelectedTracking(order)
+    }
+  }
+
+  // Get items based on active page
+  const allItems = activePage === 'order-history' 
+    ? getAllItems(true) // Only delivered orders' items
+    : getAllItems(false) // Only non-delivered orders' items
+  const filteredItems = filterItems(allItems, searchTerm, itemSearchColumn)
+
   return (
     <div className="app">
       <Sidebar activePage={activePage} onNavigate={setActivePage} />
       <div className="main-content">
         <header className="header">
-          <h1>Order Tracker</h1>
-          <p className="subtitle">Track all your orders from CSV data</p>
+          <h1>
+            {activePage === 'order-history' ? 'Order History' 
+              : activePage === 'analytics' ? 'Analytics'
+              : 'Order Tracker'}
+          </h1>
+          <p className="subtitle">
+            {activePage === 'order-history' 
+              ? 'View all delivered orders'
+              : activePage === 'analytics'
+              ? 'View analytics and insights'
+              : 'Track all your orders from CSV data'}
+          </p>
         </header>
 
         {error && (
@@ -316,11 +483,89 @@ function App() {
           </div>
         )}
 
+        {activePage === 'analytics' ? (
+          <div className="analytics-container">
+            {metabaseLoading ? (
+              <div className="loading-state">
+                <p>Loading Metabase visualization...</p>
+              </div>
+            ) : metabaseUrl ? (
+              <div className="metabase-embed-wrapper">
+                <iframe
+                  src={metabaseUrl}
+                  className="metabase-iframe"
+                  title="Metabase Analytics"
+                  frameBorder="0"
+                  width="800"
+                  height="600"
+                  allowTransparency
+                  allow="fullscreen"
+                />
+              </div>
+            ) : (
+              <div className="metabase-config-message">
+                <p>⚠️ Metabase configuration not found</p>
+                <p>Please set the following environment variables in your <code>.env</code> file:</p>
+                <div className="metabase-instructions">
+                  <ul>
+                    <li><code>VITE_METABASE_SITE_URL</code> - Your Metabase instance URL</li>
+                    <li><code>VITE_METABASE_SECRET_KEY</code> - Your Metabase embed secret key</li>
+                    <li><code>VITE_METABASE_QUESTION_ID</code> - The ID of your question (number)</li>
+                  </ul>
+                  <p><strong>Example .env file:</strong></p>
+                  <pre className="code-example">VITE_METABASE_SITE_URL=http://artichoke-penguin.pikapod.net
+VITE_METABASE_SECRET_KEY=53fe21e7488ef56145dbfb9ef9ae8d0a30a804c5c388271ae467a3cecf74f995
+VITE_METABASE_QUESTION_ID=41</pre>
+                  <p><em>Note: The embed URL is generated dynamically with a 10-minute expiration and will auto-refresh.</em></p>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {(activePage === 'tracking' || activePage === 'order-history') && (
+          <div className="view-toggle-section">
+            <button
+              className={`view-toggle-button ${viewMode === 'orders' ? 'active' : ''}`}
+              onClick={() => setViewMode('orders')}
+            >
+              📦 Orders
+            </button>
+            <button
+              className={`view-toggle-button ${viewMode === 'items' ? 'active' : ''}`}
+              onClick={() => setViewMode('items')}
+            >
+              📋 Items
+            </button>
+          </div>
+        )}
+
         <div className="search-section">
+          {((activePage === 'tracking' || activePage === 'order-history') && viewMode === 'items') && (
+            <select
+              className="search-column-select"
+              value={itemSearchColumn}
+              onChange={(e) => setItemSearchColumn(e.target.value as typeof itemSearchColumn)}
+            >
+              <option value="all">All Columns</option>
+              <option value="item_name">Item Name</option>
+              <option value="part_number">Part Number</option>
+              <option value="description">Description</option>
+              <option value="color">Color</option>
+              <option value="quantity">Quantity</option>
+              <option value="po_number">PO Number</option>
+            </select>
+          )}
           <input
             type="text"
             className="search-input"
-            placeholder="Search by tracking number, order number, PO number, company, recipient, carrier, status, or any field..."
+            placeholder={
+              ((activePage === 'tracking' || activePage === 'order-history') && viewMode === 'items')
+                ? itemSearchColumn === 'all'
+                  ? "Search all columns..."
+                  : `Search by ${itemSearchColumn.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}...`
+                : "Search by tracking number, order number, PO number, company, recipient, carrier, status, or any field..."
+            }
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -335,35 +580,30 @@ function App() {
           )}
         </div>
 
-        <div className="status-filters">
-          <button
-            className={`status-filter-button ${statusFilter.length === 0 ? 'active' : ''}`}
-            onClick={() => setStatusFilter([])}
-          >
-            All
-          </button>
-          <button
-            className={`status-filter-button ${statusFilter.includes('delivered') ? 'active' : ''}`}
-            onClick={() => toggleStatusFilter('delivered')}
-            style={{ backgroundColor: statusFilter.includes('delivered') ? '#10b981' : undefined }}
-          >
-            Delivered
-          </button>
-          <button
-            className={`status-filter-button ${statusFilter.includes('in_transit') ? 'active' : ''}`}
-            onClick={() => toggleStatusFilter('in_transit')}
-            style={{ backgroundColor: statusFilter.includes('in_transit') ? '#3b82f6' : undefined }}
-          >
-            In Transit
-          </button>
-          <button
-            className={`status-filter-button ${statusFilter.includes('out_for_delivery') ? 'active' : ''}`}
-            onClick={() => toggleStatusFilter('out_for_delivery')}
-            style={{ backgroundColor: statusFilter.includes('out_for_delivery') ? '#8b5cf6' : undefined }}
-          >
-            Out For Delivery
-          </button>
-        </div>
+        {activePage !== 'order-history' && viewMode === 'orders' && (
+          <div className="status-filters">
+            <button
+              className={`status-filter-button ${statusFilter.length === 0 ? 'active' : ''}`}
+              onClick={() => setStatusFilter([])}
+            >
+              All
+            </button>
+            <button
+              className={`status-filter-button ${statusFilter.includes('in_transit') ? 'active' : ''}`}
+              onClick={() => toggleStatusFilter('in_transit')}
+              style={{ backgroundColor: statusFilter.includes('in_transit') ? '#3b82f6' : undefined }}
+            >
+              In Transit
+            </button>
+            <button
+              className={`status-filter-button ${statusFilter.includes('out_for_delivery') ? 'active' : ''}`}
+              onClick={() => toggleStatusFilter('out_for_delivery')}
+              style={{ backgroundColor: statusFilter.includes('out_for_delivery') ? '#8b5cf6' : undefined }}
+            >
+              Out For Delivery
+            </button>
+          </div>
+        )}
 
         <div className="actions-bar">
           <button 
@@ -374,8 +614,10 @@ function App() {
             Refresh Data
           </button>
           <span className="tracking-count">
-            {sortedTrackings.length} {sortedTrackings.length === 1 ? 'order' : 'orders'}
-            {(statusFilter.length > 0 || searchTerm) && ` (of ${trackings.length} total)`}
+            {((activePage === 'tracking' || activePage === 'order-history') && viewMode === 'items')
+              ? `${filteredItems.length} ${filteredItems.length === 1 ? 'item' : 'items'}`
+              : `${sortedTrackings.length} ${sortedTrackings.length === 1 ? 'order' : 'orders'}${(statusFilter.length > 0 || searchTerm) ? ` (of ${trackingsToShow.length} total)` : ''}`
+            }
           </span>
         </div>
 
@@ -384,9 +626,56 @@ function App() {
             <div className="loading-state">
               <p>Loading your orders from CSV...</p>
             </div>
+          ) : ((activePage === 'tracking' || activePage === 'order-history') && viewMode === 'items') ? (
+            // Items view
+            filteredItems.length === 0 ? (
+              <div className="empty-state">
+                <p>No items match your search. Try adjusting your search term.</p>
+              </div>
+            ) : (
+              <div className="table-wrapper">
+                <table className="trackings-table">
+                  <thead>
+                    <tr>
+                      <th>PO Number</th>
+                      <th>Item Name</th>
+                      <th>Part Number</th>
+                      <th>Description</th>
+                      <th>Color</th>
+                      <th>Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredItems.map((item, index) => {
+                      const order = findOrderByPONumber(item.po_number)
+                      return (
+                        <tr
+                          key={`${item.po_number}-${index}`}
+                          onClick={() => handleItemClick(item)}
+                          className="clickable-row"
+                          style={{ cursor: order ? 'pointer' : 'default' }}
+                          title={order ? 'Click to view order details' : 'No order found for this PO number'}
+                        >
+                          <td>{item.po_number}</td>
+                          <td>{item.item_name || 'N/A'}</td>
+                          <td>{item.part_number || 'N/A'}</td>
+                          <td>{item.description || 'N/A'}</td>
+                          <td>{item.color || 'N/A'}</td>
+                          <td>{item.quantity || 'N/A'}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
           ) : trackings.length === 0 ? (
             <div className="empty-state">
               <p>No orders found in CSV file. Make sure TestCSVFile.csv exists in the public folder.</p>
+            </div>
+          ) : activePage === 'order-history' && trackingsToShow.length === 0 ? (
+            <div className="empty-state">
+              <p>No delivered orders found.</p>
             </div>
           ) : sortedTrackings.length === 0 ? (
             <div className="empty-state">
@@ -500,6 +789,8 @@ function App() {
             </div>
           )}
         </div>
+          </>
+        )}
 
         {selectedTracking && (
           <div className="modal-overlay" onClick={() => setSelectedTracking(null)}>

@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node -e \"const fs = require('fs'); console.log('Current dir:', process.cwd()); console.log('Files in root:', fs.readdirSync('.')); console.log('src exists:', fs.existsSync('src')); if (fs.existsSync('src')) console.log('Files in src:', fs.readdirSync('src')); console.log('index.html exists:', fs.existsSync('index.html'));\" && tsc && vite build",
+    "prebuild": "node -e \"const fs = require('fs'); console.log('=== BUILD DEBUG ==='); console.log('CWD:', process.cwd()); try { console.log('Root files:', fs.readdirSync('.').join(', ')); } catch(e) { console.log('Error reading root:', e.message); } try { console.log('src exists:', fs.existsSync('src')); if (fs.existsSync('src')) console.log('src files:', fs.readdirSync('src').join(', ')); } catch(e) { console.log('Error checking src:', e.message); } console.log('index.html exists:', fs.existsSync('index.html')); console.log('==================');\"",
+    "build": "npm run prebuild && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@types/papaparse": "^5.3.16",
+    "jose": "^6.1.2",
     "papaparse": "^5.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -22,6 +24,3 @@
     "vite": "^5.0.8"
   }
 }
-
-
-
