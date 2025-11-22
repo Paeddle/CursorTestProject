@@ -46,7 +46,12 @@ function App() {
     setMetabaseLoading(true)
     try {
       const url = await getMetabaseEmbedUrl()
-      setMetabaseUrl(url)
+      if (url) {
+        setMetabaseUrl(url)
+      } else {
+        console.warn('Metabase URL generation returned null - check environment variables')
+        setMetabaseUrl(null)
+      }
     } catch (err: any) {
       console.error('Error loading Metabase URL:', err)
       setMetabaseUrl(null)

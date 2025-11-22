@@ -51,7 +51,20 @@ export async function getMetabaseEmbedUrl(): Promise<string | null> {
   const secretKey = import.meta.env.VITE_METABASE_SECRET_KEY
   const questionId = import.meta.env.VITE_METABASE_QUESTION_ID
 
+  console.log('Metabase config check:', {
+    hasSiteUrl: !!siteUrl,
+    hasSecretKey: !!secretKey,
+    hasQuestionId: !!questionId,
+    siteUrl: siteUrl,
+    questionId: questionId
+  })
+
   if (!siteUrl || !secretKey || !questionId) {
+    console.warn('Metabase environment variables missing:', {
+      siteUrl: siteUrl || 'MISSING',
+      secretKey: secretKey ? 'SET' : 'MISSING',
+      questionId: questionId || 'MISSING'
+    })
     return null
   }
 
@@ -62,6 +75,7 @@ export async function getMetabaseEmbedUrl(): Promise<string | null> {
       questionId: parseInt(questionId, 10),
       expirationMinutes: 10
     })
+    console.log('Generated Metabase URL:', url.substring(0, 100) + '...')
     return url
   } catch (error) {
     console.error('Error generating Metabase embed URL:', error)
