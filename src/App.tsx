@@ -510,18 +510,20 @@ function App() {
             ) : (
               <div className="metabase-config-message">
                 <p>⚠️ Metabase configuration not found</p>
-                <p>Please set the following environment variables in your <code>.env</code> file:</p>
+                <p>Debug info:</p>
                 <div className="metabase-instructions">
                   <ul>
-                    <li><code>VITE_METABASE_SITE_URL</code> - Your Metabase instance URL</li>
-                    <li><code>VITE_METABASE_SECRET_KEY</code> - Your Metabase embed secret key</li>
-                    <li><code>VITE_METABASE_QUESTION_ID</code> - The ID of your question (number)</li>
+                    <li>VITE_METABASE_SITE_URL: {import.meta.env.VITE_METABASE_SITE_URL || 'NOT SET'}</li>
+                    <li>VITE_METABASE_SECRET_KEY: {import.meta.env.VITE_METABASE_SECRET_KEY ? 'SET (hidden)' : 'NOT SET'}</li>
+                    <li>VITE_METABASE_QUESTION_ID: {import.meta.env.VITE_METABASE_QUESTION_ID || 'NOT SET'}</li>
                   </ul>
-                  <p><strong>Example .env file:</strong></p>
-                  <pre className="code-example">VITE_METABASE_SITE_URL=http://artichoke-penguin.pikapod.net
-VITE_METABASE_SECRET_KEY=53fe21e7488ef56145dbfb9ef9ae8d0a30a804c5c388271ae467a3cecf74f995
-VITE_METABASE_QUESTION_ID=41</pre>
-                  <p><em>Note: The embed URL is generated dynamically with a 10-minute expiration and will auto-refresh.</em></p>
+                  <p>Please check the browser console for detailed error messages.</p>
+                  <p>For DigitalOcean, add these as App-Level Environment Variables with scope <code>RUN_AND_BUILD_TIME</code>:</p>
+                  <ul>
+                    <li><code>VITE_METABASE_SITE_URL</code> = <code>http://artichoke-penguin.pikapod.net</code></li>
+                    <li><code>VITE_METABASE_SECRET_KEY</code> = <code>53fe21e7488ef56145dbfb9ef9ae8d0a30a804c5c388271ae467a3cecf74f995</code></li>
+                    <li><code>VITE_METABASE_QUESTION_ID</code> = <code>41</code></li>
+                  </ul>
                 </div>
               </div>
             )}
