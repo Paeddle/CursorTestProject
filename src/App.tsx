@@ -505,30 +505,7 @@ function App() {
                   height="600"
                   allowTransparency
                   allow="fullscreen"
-                  onLoad={() => {
-                    console.log('Metabase iframe loaded successfully')
-                  }}
-                  onError={(e) => {
-                    console.error('Metabase iframe error:', e)
-                  }}
                 />
-                <div className="metabase-debug-info" style={{ marginTop: '1rem', padding: '1rem', background: '#f3f4f6', borderRadius: '8px', fontSize: '0.875rem' }}>
-                  <p><strong>Debug Info:</strong></p>
-                  <p>Question ID: {import.meta.env.VITE_METABASE_QUESTION_ID || 'NOT SET'}</p>
-                  <p>Site URL: {import.meta.env.VITE_METABASE_SITE_URL || 'NOT SET'}</p>
-                  <p>If the query is failing, check:</p>
-                  <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
-                    <li>Is the question ID correct? (Current: {import.meta.env.VITE_METABASE_QUESTION_ID || 'NOT SET'})</li>
-                    <li>Is the question enabled for static embedding in Metabase?</li>
-                    <li>Does the question have a valid database connection?</li>
-                    <li>Check Metabase logs: Admin → Tools → Logs</li>
-                    <li>Try opening the question directly in Metabase to verify it works</li>
-                    <li>If using HTTPS site, ensure Metabase URL supports HTTPS (code will auto-convert HTTP to HTTPS)</li>
-                  </ul>
-                  <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>
-                    Check browser console for the generated embed URL and JWT payload details.
-                  </p>
-                </div>
               </div>
             ) : (
               <div className="metabase-config-message">
