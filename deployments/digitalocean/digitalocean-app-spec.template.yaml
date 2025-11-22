@@ -1,0 +1,20 @@
+name: __APP_NAME__
+region: __REGION__
+static_sites:
+  - name: web
+    github:
+      repo: __GITHUB_REPO__
+      branch: __GITHUB_BRANCH__
+      deploy_on_push: false
+    environment_slug: node-js
+    source_dir: ./
+    output_dir: dist
+    build_command: npm install && npm run build
+    routes:
+      - path: /
+    envs:
+      - key: VITE_AFTERSHIP_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "__VITE_AFTERSHIP_API_KEY__"
+
